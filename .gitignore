@@ -1,0 +1,7 @@
+__pycache__/
+.env/
+.deleted/
+aliases/
+collections/
+myenv/
+node_modules/
