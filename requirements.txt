@@ -1,9 +1,0 @@
-langchain
-sentence-transformers
-torch
-pypdf
-qdrant-client
-fastapi
-uvicorn
-langchain_qdrant
-langchain-google-genai
