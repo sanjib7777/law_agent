@@ -2,10 +2,6 @@ from pydantic_settings import BaseSettings
 
 
 class Settings(BaseSettings):
-    # OpenAI Settings
-    openai_api_key: str
-    embedding_model: str = "text-embedding-3-small"
-
     # Gemini Settings
     gemini_api_key: str = ""
 

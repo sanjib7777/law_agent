@@ -26,7 +26,7 @@ class VectorStoreService:
             self.client.create_collection(
                 collection_name=self.collection,
                 vectors_config=VectorParams(
-                    size=1536,
+                    size=1024,
                     distance=Distance.COSINE
                 )
             )
