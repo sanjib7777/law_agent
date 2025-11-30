@@ -59,7 +59,7 @@ class VectorStoreService:
         return document_id
     
 
-    async def search_similar(self, query_embedding: List[float], top_k: int = None) -> Tuple[List[str], List[float]]:
+    async def search_similar(self, query_embedding: List[float], top_k: int = None) -> Tuple[List[str], List[float], List[dict]]:
         """
         Search for similar documents
         """
@@ -74,25 +74,18 @@ class VectorStoreService:
         # Initialize lists for the results
         contents = []
         scores = []
+        metadatas = []
 
         # Process each hit
         for hit in search_result:
-        
-            # Since hit is a tuple, the first element (hit[0]) is a label, and the second element (hit[1]) is a list of ScoredPoint objects
             label = hit[0]  
             scored_points = hit[1]
-            
-            # Process each ScoredPoint in the list
             for scored_point in scored_points:
-                # Extract the score and payload from the ScoredPoint
                 score = scored_point.score
                 payload = scored_point.payload
-
-                # Extract the content from the payload (assuming payload is a dictionary with 'content' key)
-                content = payload.get("content", "")  # Using .get() to avoid KeyError if 'content' is missing
-
-                # Append the content and score to their respective lists
+                content = payload.get("content", "")
+                metadata = payload.get("metadata", {})
                 contents.append(content)
                 scores.append(score)
-        
-        return contents, scores
+                metadatas.append(metadata)
+        return contents, scores, metadatas
