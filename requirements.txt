@@ -10,5 +10,5 @@ openai
 python-dotenv
 langchain-text-splitters
 pymupdf
-docx
+python-docx
 
