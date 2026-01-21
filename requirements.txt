@@ -1,9 +1,14 @@
 langchain
-sentence-transformers
+huggingface_hub
+python-multipart
 torch
 pypdf
 qdrant-client
 fastapi
 uvicorn
-langchain_qdrant
-langchain-google-genai
+langchain-qdrant
+openai
+python-dotenv
+langchain-text-splitters
+pymupdf
+pypdf

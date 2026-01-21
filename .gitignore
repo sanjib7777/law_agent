@@ -5,3 +5,12 @@ aliases/
 collections/
 myenv/
 node_modules/
+dataset/
+ingestion/
+loader/
+parsers/
+vectorstore/
+raft_state.json
+Untitled.ipynb
+.ipynb_checkpoints/
+config/

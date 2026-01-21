@@ -1,0 +1,42 @@
+from openai import OpenAI
+import os
+from dotenv import load_dotenv
+load_dotenv()
+
+client = OpenAI(
+    api_key=os.getenv("GROQ_API_KEY"),
+    base_url="https://api.groq.com/openai/v1"
+)
+
+QUERY_CLASSIFIER_PROMPT = """
+You are a legal query classifier for Nepali law.
+
+Classify the user's question into exactly ONE of the following labels:
+
+- LOOKUP → asking for a specific Article or Section
+- INTERPRETATION → asking meaning, scope, explanation
+- CASE_BASED → asking how courts have interpreted or applied law
+- PREDICTIVE → hypothetical or future legal outcome
+- GENERAL → none of the above
+
+Return ONLY the label(LOOKUP,INTERPRETATION,CASE_BASED,PREDICTIVE,GENERAL).
+
+Question:
+{question}
+"""
+
+def classify_query_llm(question: str) -> str:
+    response = client.chat.completions.create(
+        model="llama-3.1-8b-instant",
+        messages=[
+            {"role": "system", "content": "You classify legal questions."},
+            {"role": "user", "content": QUERY_CLASSIFIER_PROMPT.format(question=question)}
+        ],
+        temperature=0.1,
+        max_tokens=10
+    )
+    print(f'response:{response}')
+
+    label = response.choices[0].message.content.strip().upper()
+    print(label)
+    return label
