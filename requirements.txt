@@ -1,7 +1,6 @@
 langchain
 huggingface_hub
 python-multipart
-torch
 pypdf
 qdrant-client
 fastapi
@@ -11,4 +10,5 @@ openai
 python-dotenv
 langchain-text-splitters
 pymupdf
-pypdf
+docx
+
