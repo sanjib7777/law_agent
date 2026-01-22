@@ -11,4 +11,5 @@ python-dotenv
 langchain-text-splitters
 pymupdf
 python-docx
-
+redis
+scikit-learn 

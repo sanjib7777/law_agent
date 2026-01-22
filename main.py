@@ -1,17 +1,33 @@
 # to create a fastapi app to serve a langchain model
-from fastapi import FastAPI, UploadFile, File, HTTPException
+from fastapi import FastAPI, UploadFile, File, HTTPException, Request
 from Upload_into_database.upload_acts import ingest_act_pdfs
 from retrieve import legal_rag_answer
 from Upload_into_database.upload_constitution import ingest_constitution
 from Upload_into_database.upload_old_case import ingest_case_docx
+from semantic_cache import get_semantic_cache, set_semantic_cache
+from embedding import embeddings
 import os
 from typing import List
+import uuid
 
 app = FastAPI()
 
 DATASET_DIR = "dataset"
 
+@app.middleware("http")
+async def add_session_cookie(request: Request, call_next):
+    session_id = request.cookies.get("session_id")
+    if not session_id:
+        session_id = str(uuid.uuid4())
 
+    response = await call_next(request)
+    response.set_cookie(
+        key="session_id",
+        value=session_id,
+        httponly=True,
+        samesite="lax"
+    )
+    return response
 
 @app.post("/ingest_constitution/")
 async def ingest_constitution_api(file: UploadFile = File(...)):
@@ -72,9 +88,37 @@ async def upload_acts(files: List[UploadFile] = File(...)):
 
 # to create an endpoint to query the model
 @app.post("/query/")
-def query_model(question: str):
-    response = legal_rag_answer(question)
-    return {"answer": response}
+async def query_model(question: str, request: Request):
+    session_id = request.cookies.get("session_id")
+
+    
+    cached_answer = get_semantic_cache(
+        session_id=session_id,
+        query=question,
+        embedder=embeddings
+    )
+
+    if cached_answer:
+        return {
+            "answer": cached_answer,
+            "cached": True
+        }
+
+    
+    answer = legal_rag_answer(question)
+
+
+    set_semantic_cache(
+        session_id=session_id,
+        query=question,
+        answer=answer,
+        embedder=embeddings
+    )
+
+    return {
+        "answer": answer,
+        "cached": False
+    }
 
 
 
