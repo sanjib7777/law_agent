@@ -28,6 +28,9 @@ async def add_session_cookie(request: Request, call_next):
         samesite="lax"
     )
     return response
+@app.get("/") 
+def read_root(): 
+    return {"message": "Welcome to FastAPI root endpoint!"}
 
 @app.post("/ingest_constitution/")
 async def ingest_constitution_api(file: UploadFile = File(...)):

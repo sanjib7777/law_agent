@@ -9,21 +9,29 @@ client = OpenAI(
 )
 
 QUERY_CLASSIFIER_PROMPT = """
-You are a legal query classifier for Nepali law.
+You are an expert legal query classifier for Nepali law.
+
+Your task:
+- Determine whether the question is related to law, legal rights, courts, constitution,
+  statutes, acts, cases, or judicial interpretation.
+- If the question is NOT related to legal or judicial matters, return NOT_LEGAL.
 
 Classify the user's question into exactly ONE of the following labels:
 
 - LOOKUP → asking for a specific Article or Section
-- INTERPRETATION → asking meaning, scope, explanation
+- INTERPRETATION → asking meaning, scope, explanation of law
 - CASE_BASED → asking how courts have interpreted or applied law
 - PREDICTIVE → hypothetical or future legal outcome
-- GENERAL → none of the above
+- GENERAL → legal question but does not fit above categories
+- NOT_LEGAL → completely unrelated to law or judiciary
 
-Return ONLY the label(LOOKUP,INTERPRETATION,CASE_BASED,PREDICTIVE,GENERAL).
+Return ONLY ONE label from:
+LOOKUP, INTERPRETATION, CASE_BASED, PREDICTIVE, GENERAL, NOT_LEGAL
 
 Question:
 {question}
 """
+
 
 def classify_query_llm(question: str) -> str:
     response = client.chat.completions.create(

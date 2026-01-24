@@ -16,6 +16,8 @@ from prompts.prompt import (
 )
 
 
+SIMILARITY_THRESHOLD = 0.5
+
 
 # =========================
 # INITIALIZATION FUNCTION
@@ -29,11 +31,14 @@ def init_clients():
     qdrant = QdrantClient(url=QDRANT_URL, api_key=QDRANT_API_KEY)
    
 
-    qdrant.create_payload_index(
-        collection_name="nepal_constitution",
-        field_name="metadata.article_number",
-        field_schema=PayloadSchemaType.KEYWORD
-    )
+    try:
+        qdrant.create_payload_index(
+            collection_name="nepal_constitution",
+            field_name="metadata.article_number",
+            field_schema=PayloadSchemaType.KEYWORD
+        )
+    except Exception:
+        pass 
 
 
     constitution_store = QdrantVectorStore(
@@ -60,48 +65,77 @@ def init_clients():
     return constitution_store, case_store, act_store, groq_client
 
 
+def filter_by_similarity(results, threshold, label="DOC"):
+    filtered = []
+    for doc, score in results:
+        
+        print(f"[{label}] score={score:.4f}")
+
+        if score <= threshold:
+            
+
+            filtered.append((doc, score))
+
+    return filtered
+
+
+
 # =========================
 # SEARCH HELPERS
 # =========================
 def hybrid_constitution_search(store, query: str, k: int = 3):
-    article_no = re.search(r"\barticle\s+(\d+)", query.lower())
-    if article_no:
-        docs = store.similarity_search(
-            query,
-            k=k,
-            filter=Filter(
-                must=[FieldCondition(
-                    key="metadata.article_number",
-                    match=MatchValue(value=article_no.group(1))
-                )]
-            )
-        )
-        if docs:
-            return docs
+    article_no = re.search(r"\barticle\s+(\d+)", query.lower()) 
+    if article_no: 
+        docs = store.similarity_search( 
+            query, 
+            k=k, 
+            filter=Filter( 
+                must=[FieldCondition( 
+                    key="metadata.article_number", 
+                    match=MatchValue(value=article_no.group(1)) 
+                    )] 
+                    ) 
+                    ) 
+        if docs: 
+            return docs 
     return store.similarity_search(query, k=k)
 
 
+
 def retrieve_act_semantic(store, query: str, k: int = 5):
-    docs = store.similarity_search(query, k=k)
     section_no = re.search(r"\bsection\s+(\d+)", query.lower())
+
+    results = store.similarity_search_with_score(query, k=k)
+
+    # STEP 1: similarity filtering
+    docs = filter_by_similarity(
+        results,
+        SIMILARITY_THRESHOLD,
+        label="ACT"
+    )
+
+    # STEP 2: section constraint
     if section_no:
-        exact = [d for d in docs if d.metadata.get("section_number") == section_no.group(1)]
-        if exact:
-            return exact
-        else:
-            raise ValueError(f"Section {section_no.group(1)} exists but was not retrieved.")
+        docs = [
+            d for d in docs
+            if d.metadata.get("section_number") == section_no.group(1)
+        ]
+
     return docs
 
 
-def hybrid_case_search(store, query: str, k: int = 4):
-    docs = store.similarity_search(query, k=k)
-    keywords = set(query.lower().split())
 
-    def score(doc):
-        meta_text = " ".join(str(v).lower() for v in doc.metadata.values())
-        return sum(1 for kw in keywords if kw in meta_text)
+def hybrid_case_search(store, query: str, k: int = 5):
+    results = store.similarity_search_with_score(query, k=k)
 
-    return sorted(docs, key=score, reverse=True)
+    # ONLY semantic filtering — no keyword hacks
+    docs = filter_by_similarity(
+        results,
+        SIMILARITY_THRESHOLD,
+        label="CASE LAW"
+    )
+
+    return docs
 
 
 # =========================
@@ -142,7 +176,13 @@ def retrieve_documents(question: str, query_type: str,
 # =========================
 def format_context(docs):
     blocks = []
-    for d in docs:
+    
+    for item in docs:
+        if isinstance(item, tuple):
+            d, score = item
+        else:
+            d = item
+            score = None
         meta = d.metadata
         doc_type = meta.get("doc_type", "").lower()
 
@@ -210,6 +250,11 @@ def legal_rag_answer(question: str):
     constitution_store, case_store, act_store, groq_client = init_clients()
 
     query_type = classify_query_llm(question)
+    if query_type == "NOT_LEGAL":
+        return (
+            "This question is not related to Nepali law, legal provisions, "
+            "or judicial matters. Please ask a legal question."
+        )
     docs = retrieve_documents(question, query_type,
                               constitution_store, case_store, act_store)
 
