@@ -16,7 +16,7 @@ from prompts.prompt import (
 )
 
 
-SIMILARITY_THRESHOLD = 0.5
+SIMILARITY_THRESHOLD = 0.7
 
 
 # =========================
@@ -263,6 +263,5 @@ def legal_rag_answer(question: str):
 
     prompt = prompt_template.format(context=context, question=question)
     return call_groq(groq_client, prompt)
-
 
 
