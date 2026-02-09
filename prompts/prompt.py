@@ -5,7 +5,7 @@ User role: {user_role}
 
 Using ONLY the provided legal context:
 
-IF user_role == "NORMAL":
+IF user_role == "CLIENT":
 - Identify the relevant Article
 - Explain it in very simple, everyday language
 - Avoid legal jargon
@@ -32,7 +32,7 @@ User role: {user_role}
 
 Using ONLY the provided legal context:
 
-IF user_role == "NORMAL":
+IF user_role == "CLIENT":
 - Explain the meaning in simple, non-technical language
 - Avoid complex constitutional terms
 - Limit to 1 short paragraph
@@ -59,7 +59,7 @@ User role: {user_role}
 
 Use ONLY the provided legal context. Do NOT assume or invent any sources.
 
-IF user_role == "NORMAL":
+IF user_role == "CLIENT":
 - Explain the issue in simple terms
 - Mention Articles or cases only if clearly relevant
 - Avoid complex legal reasoning
@@ -96,7 +96,7 @@ User role: {user_role}
 
 Using ONLY the provided legal context:
 
-IF user_role == "NORMAL":
+IF user_role == "CLIENT":
 - Explain likely outcome in simple terms
 - Clearly say this is not legal advice
 - Keep it short and friendly

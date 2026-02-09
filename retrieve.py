@@ -256,7 +256,14 @@ def legal_rag_answer(question: str, user_id: str, user_role: str):
     if user_id is None:
         user_id = str(uuid.uuid4())
     user_role = user_role.upper()
+
+    if user_role in ["LAWYER", "FIRM"]:
+        user_role = "LAWYER"
+    else:
+        user_role = user_role
+
     query_type = classify_query_llm(question)
+
     print(f"query: {query_type}")
     # Initialize the response dictionary
     response_data = {
@@ -268,7 +275,7 @@ def legal_rag_answer(question: str, user_id: str, user_role: str):
     if query_type == "RECOMMENDATION":
         print(user_role)
         # Fetch the user's past queries from the database
-        if user_role == "LAWYER":
+        if user_role in ["LAWYER", "FIRM"]:
             response_data["answer"] = "As a lawyer, you may ask legal questions or analyze legal issues. Lawyer recommendation is available only for general users. "
                 
                 
@@ -305,15 +312,10 @@ def legal_rag_answer(question: str, user_id: str, user_role: str):
         # Prepare the prompt and get response from Groq
         print('extracted prompt')
         prompt = prompt_template.format(context=context, question=question,user_role=user_role)
+        print(prompt)
         response_data["answer"] = call_groq(groq_client, prompt)
         
-        # OPTIONAL: infer legal domain from docs
-        legal_domain = (
-            docs[0][0].metadata.get("subject")
-            if isinstance(docs[0], tuple)
-            else docs[0].metadata.get("subject")
-        )
-        
+       
         # Store the query in the database
         # store_user_query(
         #     user_id=user_id,
