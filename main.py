@@ -1,9 +1,9 @@
 # to create a fastapi app to serve a langchain model
 from fastapi import FastAPI, UploadFile, File, HTTPException, Request
-from Upload_into_database.upload_acts import ingest_act_pdfs
+# from Upload_into_database.upload_acts import ingest_act_pdfs
 from retrieve import legal_rag_answer
-from Upload_into_database.upload_constitution import ingest_constitution
-from Upload_into_database.upload_old_case import ingest_case_docx
+# from Upload_into_database.upload_constitution import ingest_constitution
+# from Upload_into_database.upload_old_case import ingest_case_docx
 from semantic_cache import get_semantic_cache, set_semantic_cache
 from embedding import embeddings
 import os
