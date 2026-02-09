@@ -7,25 +7,30 @@ client = OpenAI(
 )
 
 LAWYER_RECOMMENDATION_PROMPT = """
-You are a legal assistant for Nepal.
+You are a classification engine.
 
-Below is a list of a user's past legal questions.
-Analyze them and determine which type of lawyer the user most likely needs.
+Your task:
+- Analyze the user's past legal questions
+- Decide which ONE lawyer category best matches the majority of the questions
 
-Possible categories:
-- Criminal 
-- Civil 
+Allowed categories (choose EXACTLY ONE):
+- Criminal
+- Civil
 - Finance
-- Corporate 
+- Corporate
 
-Return ONLY ONE label from:
-Criminal, Civil, Finance, Corporate
+STRICT OUTPUT RULES:
+- Output MUST be exactly ONE word from the allowed categories
+- Output MUST NOT contain explanations, sentences, punctuation, or extra text
+- Output MUST be ONLY the category name
+
+If the questions relate to multiple areas, choose the MOST dominant one.
 
 User's past questions:
 {queries}
-
-
 """
+
+
 
 def recommend_lawyer_from_history(user_queries: list[str]) -> str:
     joined_queries = "\n".join(f"- {q}" for q in user_queries)

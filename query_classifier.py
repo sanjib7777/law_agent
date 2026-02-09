@@ -26,10 +26,13 @@ Classify the user's question into exactly ONE of the following labels:
 - NOT_LEGAL → completely unrelated to law or judiciary
 - RECOMMENDATION → asking to find or recommend a lawyer,  asking to contact, consult, or book a lawyer
 
-Return ONLY ONE label from the below :
-LOOKUP, INTERPRETATION, CASE_BASED, PREDICTIVE, GENERAL, NOT_LEGAL, RECOMMENDATION
+STRICT OUTPUT FORMAT:
+- Output must be EXACTLY ONE of the labels above i.e (LOOKUP, INTERPRETATION, CASE_BASED, PREDICTIVE, GENERAL, NOT_LEGAL, RECOMMENDATION)
+- Output must be in ALL CAPS
+- Output must contain NO punctuation, NO spaces, NO explanation
 
-Important Note: Don't give extra content except the label
+If the question does not clearly fit any category, output GENERAL.
+
 Question:
 {question}
 """
