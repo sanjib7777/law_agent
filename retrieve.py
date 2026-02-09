@@ -1,5 +1,6 @@
 import os
 import re
+import uuid
 from dotenv import load_dotenv
 from openai import OpenAI
 from qdrant_client.http.models import PayloadSchemaType
@@ -8,6 +9,9 @@ from langchain_qdrant import QdrantVectorStore
 from query_classifier import classify_query_llm
 from qdrant_client.models import Filter, FieldCondition, MatchValue
 from embedding import embeddings
+from recommendation.storage import store_user_query, fetch_user_queries
+from recommendation.user_recommendation import recommend_lawyer_from_history
+
 from prompts.prompt import (
     LOOKUP_PROMPT,
     INTERPRETATION_PROMPT,
@@ -16,7 +20,7 @@ from prompts.prompt import (
 )
 
 
-SIMILARITY_THRESHOLD = 0.7
+SIMILARITY_THRESHOLD = 0.8
 
 
 # =========================
@@ -246,22 +250,72 @@ def call_groq(groq_client, prompt: str) -> str:
 # =========================
 # MAIN RAG PIPELINE
 # =========================
-def legal_rag_answer(question: str):
+def legal_rag_answer(question: str, user_id: str | None = None):
     constitution_store, case_store, act_store, groq_client = init_clients()
-
+    
+    if user_id is None:
+        user_id = str(uuid.uuid4())
+    
     query_type = classify_query_llm(question)
-    if query_type == "NOT_LEGAL":
-        return (
+    print(f"query: {query_type}")
+    # Initialize the response dictionary
+    response_data = {
+        "answer": "",
+        "query_type": query_type,
+        "case_category": ""
+    }
+    
+    if query_type == "RECOMMENDATION":
+        # Fetch the user's past queries from the database
+        print("going into recommendation")
+        user_queries = fetch_user_queries(user_id)
+        
+        # Recommend a lawyer based on past queries
+        lawyer_type = recommend_lawyer_from_history(user_queries)
+        
+        # Update the response
+        response_data["case_category"] = lawyer_type  # List of matched categories for lawyer
+        response_data["answer"] = ""  # Empty answer since it's a lawyer recommendation
+        # store_user_query(
+        #     user_id=user_id,
+        #     query=question,
+        #     query_type=query_type,
+        #     response=response_data
+        # )
+        
+    elif query_type == "NOT_LEGAL":
+        response_data["answer"] = (
             "This question is not related to Nepali law, legal provisions, "
             "or judicial matters. Please ask a legal question."
         )
-    docs = retrieve_documents(question, query_type,
-                              constitution_store, case_store, act_store)
-
-    context = format_context(docs)
-    prompt_template = select_prompt(query_type)
-
-    prompt = prompt_template.format(context=context, question=question)
-    return call_groq(groq_client, prompt)
-
-
+        response_data["case_category"] = "" # No recommendations for non-legal queries
+        
+    else:
+        # Process normal legal queries
+        docs = retrieve_documents(question, query_type, constitution_store, case_store, act_store)
+        context = format_context(docs)
+        prompt_template = select_prompt(query_type)
+        
+        # Prepare the prompt and get response from Groq
+        print('extracted prompt')
+        prompt = prompt_template.format(context=context, question=question)
+        response_data["answer"] = call_groq(groq_client, prompt)
+        
+        # OPTIONAL: infer legal domain from docs
+        legal_domain = (
+            docs[0][0].metadata.get("subject")
+            if isinstance(docs[0], tuple)
+            else docs[0].metadata.get("subject")
+        )
+        
+        # Store the query in the database
+        # store_user_query(
+        #     user_id=user_id,
+        #     query=question,
+        #     query_type=query_type,
+        #     response=response_data
+        # )
+        
+        response_data["case_category"] = ""  
+    
+    return response_data

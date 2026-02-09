@@ -32,96 +32,92 @@ async def add_session_cookie(request: Request, call_next):
 def read_root(): 
     return {"message": "Welcome to FastAPI root endpoint!"}
 
-@app.post("/ingest_constitution/")
-async def ingest_constitution_api(file: UploadFile = File(...)):
-    if not file.filename.lower().endswith(".pdf"):
-        raise HTTPException(400, "Only PDF files allowed")
+# @app.post("/ingest_constitution/")
+# async def ingest_constitution_api(file: UploadFile = File(...)):
+#     if not file.filename.lower().endswith(".pdf"):
+#         raise HTTPException(400, "Only PDF files allowed")
 
-    pdf_path = os.path.join(DATASET_DIR, file.filename)
+#     pdf_path = os.path.join(DATASET_DIR, file.filename)
 
-    if not os.path.exists(pdf_path):
-        raise HTTPException(404, f"{file.filename} not found in dataset folder")
+#     if not os.path.exists(pdf_path):
+#         raise HTTPException(404, f"{file.filename} not found in dataset folder")
 
-    result = ingest_constitution(pdf_path)
+#     result = ingest_constitution(pdf_path)
 
-    return {
-        "status": "success",
-        "filename": file.filename,
-        "details": result
-    }
-
-
-
-@app.post("/ingest_old_case/")
-async def ingest_case_laws(file: UploadFile = File(...)):
-    if not file.filename.lower().endswith(".docx"):
-        raise HTTPException(400, "Only DOCX files allowed")
-
-    docx_path = os.path.join(DATASET_DIR, file.filename)
-
-    if not os.path.exists(docx_path):
-        raise HTTPException(404, f"{file.filename} not found in dataset folder")
-
-    return ingest_case_docx(docx_path)
+#     return {
+#         "status": "success",
+#         "filename": file.filename,
+#         "details": result
+#     }
 
 
 
-@app.post("/upload_acts/")
-async def upload_acts(files: List[UploadFile] = File(...)):
-    paths = []
+# @app.post("/ingest_old_case/")
+# async def ingest_case_laws(file: UploadFile = File(...)):
+#     if not file.filename.lower().endswith(".docx"):
+#         raise HTTPException(400, "Only DOCX files allowed")
 
-    for file in files:
-        if not file.filename.lower().endswith(".pdf"):
-            raise HTTPException(400, f"{file.filename} is not a PDF")
+#     docx_path = os.path.join(DATASET_DIR, file.filename)
 
-        pdf_path = os.path.join(DATASET_DIR, file.filename)
+#     if not os.path.exists(docx_path):
+#         raise HTTPException(404, f"{file.filename} not found in dataset folder")
 
-        if not os.path.exists(pdf_path):
-            raise HTTPException(404, f"{file.filename} not found in dataset folder")
+#     return ingest_case_docx(docx_path)
 
-        paths.append(pdf_path)
 
-    result = ingest_act_pdfs(paths)
 
-    return {
-        "status": "success",
-        "files_used": [f.filename for f in files],
-        "details": result
-    }
+# @app.post("/upload_acts/")
+# async def upload_acts(files: List[UploadFile] = File(...)):
+#     paths = []
+
+#     for file in files:
+#         if not file.filename.lower().endswith(".pdf"):
+#             raise HTTPException(400, f"{file.filename} is not a PDF")
+
+#         pdf_path = os.path.join(DATASET_DIR, file.filename)
+
+#         if not os.path.exists(pdf_path):
+#             raise HTTPException(404, f"{file.filename} not found in dataset folder")
+
+#         paths.append(pdf_path)
+
+#     result = ingest_act_pdfs(paths)
+
+#     return {
+#         "status": "success",
+#         "files_used": [f.filename for f in files],
+#         "details": result
+#     }
 
 # to create an endpoint to query the model
 @app.post("/query/")
-async def query_model(question: str, request: Request):
-    session_id = request.cookies.get("session_id")
+async def query_model(question: str, user_id: str):
 
-    
-    cached_answer = get_semantic_cache(
-        session_id=session_id,
+
+    # 1️ Try semantic cache
+    cached_response = get_semantic_cache(
+        session_id=user_id,
         query=question,
         embedder=embeddings
     )
 
-    if cached_answer:
-        return {
-            "answer": cached_answer,
-            "cached": True
-        }
+    if cached_response:
+        # cached_response must already be a dict
+        return cached_response
 
-    
-    answer = legal_rag_answer(question)
+    # 2 Call RAG pipeline
+    response = legal_rag_answer(
+        question=question,
+        user_id=user_id
+    )
 
-
+    #  Store full structured response in cache
     set_semantic_cache(
-        session_id=session_id,
+        session_id=user_id,
         query=question,
-        answer=answer,
+        answer=response,  
         embedder=embeddings
     )
 
-    return {
-        "answer": answer,
-        "cached": False
-    }
-
-
-
+    # Return response directly
+    return response

@@ -1,15 +1,15 @@
+import os
 import re
 import uuid
 from typing import List, Tuple
 from docx import Document
-
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 from langchain_qdrant import QdrantVectorStore
-from embedding import embeddings
+from sentence_transformers import SentenceTransformer
 from qdrant_client import QdrantClient
 from qdrant_client.models import VectorParams, Distance
 from dotenv import load_dotenv
-import os
+from langchain.embeddings import Embeddings
 load_dotenv()
 
 # =========================
@@ -18,8 +18,8 @@ load_dotenv()
 COLLECTION_NAME = "case_laws"
 QDRANT_URL = os.getenv("QDRANT_URL")
 QDRANT_API_KEY = os.getenv("QDRANT_API_KEY")
-CASE_SPLIT_PATTERN = r"(Case:\s*\d+)"
 
+CASE_SPLIT_PATTERN = r"(Case:\s*\d+)"
 
 SECTION_HEADERS = {
     "facts": "brief facts",
@@ -39,12 +39,27 @@ CHUNK_CONFIG = {
     "summary": (500, 50)
 }
 
+# Load the local model
+model = SentenceTransformer('BAAI/bge-m3')  # You can replace with your preferred model
+
+
+class LocalEmbeddings(Embeddings):
+    """LangChain-compatible embeddings using a locally loaded model"""
+
+    def embed_query(self, text: str):
+        return model.encode([text])[0]  # Embeds a single query
+
+    def embed_documents(self, texts: List[str]):
+        return model.encode(texts)  # Embeds a list of documents
+
+
 # =========================
 # LOAD DOCX
 # =========================
 def load_docx(path: str) -> str:
     doc = Document(path)
     return "\n".join(p.text for p in doc.paragraphs if p.text.strip())
+
 
 # =========================
 # SPLIT CASES
@@ -66,6 +81,7 @@ def split_cases(text: str) -> List[str]:
 
     return cases
 
+
 # =========================
 # METADATA EXTRACTION
 # =========================
@@ -83,6 +99,7 @@ def extract_case_metadata(text: str) -> dict:
         "case_no": find(r"Case No\s*:\s*(.+)"),
         "subject": find(r"Subject\s*:\s*(.+)")
     }
+
 
 # =========================
 # SECTION EXTRACTION
@@ -113,6 +130,7 @@ def extract_sections(case_text: str) -> dict:
 
     return sections
 
+
 # =========================
 # CHUNKING
 # =========================
@@ -141,19 +159,18 @@ def chunk_sections(sections: dict, base_metadata: dict) -> Tuple[list, list]:
 
     return texts, metadatas
 
+
 # =========================
 # VECTOR STORE
 # =========================
 def get_vector_store() -> QdrantVectorStore:
-    
-
-    client = QdrantClient(url=QDRANT_URL, api_key=QDRANT_API_KEY,timeout=60)
+    client = QdrantClient(url=QDRANT_URL, api_key=QDRANT_API_KEY, timeout=60)
 
     if not client.collection_exists(COLLECTION_NAME):
         client.create_collection(
             collection_name=COLLECTION_NAME,
             vectors_config=VectorParams(
-                size=embeddings.client.get_sentence_embedding_dimension(),
+                size=1024,
                 distance=Distance.COSINE
             )
         )
@@ -161,8 +178,9 @@ def get_vector_store() -> QdrantVectorStore:
     return QdrantVectorStore(
         client=client,
         collection_name=COLLECTION_NAME,
-        embedding=embeddings
+        embedding=LocalEmbeddings() 
     )
+
 
 # =========================
 # INGEST ENTRY POINT
@@ -170,7 +188,7 @@ def get_vector_store() -> QdrantVectorStore:
 def ingest_case_docx(docx_path: str) -> dict:
     text = load_docx(docx_path)
     cases = split_cases(text)
-
+    print(len(cases))
     vector_store = get_vector_store()
     total_chunks = 0
 
@@ -182,10 +200,23 @@ def ingest_case_docx(docx_path: str) -> dict:
         if texts:
             vector_store.add_texts(texts, metadatas=metas)
             total_chunks += len(texts)
-
+    print(total_chunks)
     return {
         "status": "success",
         "cases_detected": len(cases),
         "chunks_uploaded": total_chunks,
         "collection": COLLECTION_NAME
     }
+
+# =========================
+# RUN THE INGESTION FOR INDIVIDUAL FILES
+# =========================
+if __name__ == "__main__":
+    docx_paths = [
+        "./dataset/criminal-kartabya jyan.docx",
+        "./dataset/Personal-Criminal.docx"
+    ]
+    for docx_path in docx_paths:
+        print(f"Ingesting file: {docx_path}")
+        result = ingest_case_docx(docx_path)
+        print(result)

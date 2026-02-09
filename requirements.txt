@@ -13,3 +13,4 @@ pymupdf
 python-docx
 redis
 scikit-learn 
+psycopg2
