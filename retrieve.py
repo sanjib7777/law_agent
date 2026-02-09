@@ -250,12 +250,12 @@ def call_groq(groq_client, prompt: str) -> str:
 # =========================
 # MAIN RAG PIPELINE
 # =========================
-def legal_rag_answer(question: str, user_id: str | None = None):
+def legal_rag_answer(question: str, user_id: str, user_role: str):
     constitution_store, case_store, act_store, groq_client = init_clients()
     
     if user_id is None:
         user_id = str(uuid.uuid4())
-    
+    user_role = user_role.upper()
     query_type = classify_query_llm(question)
     print(f"query: {query_type}")
     # Initialize the response dictionary
@@ -266,16 +266,22 @@ def legal_rag_answer(question: str, user_id: str | None = None):
     }
     
     if query_type == "RECOMMENDATION":
+        print(user_role)
         # Fetch the user's past queries from the database
-        print("going into recommendation")
-        user_queries = fetch_user_queries(user_id)
-        
-        # Recommend a lawyer based on past queries
-        lawyer_type = recommend_lawyer_from_history(user_queries)
-        
-        # Update the response
-        response_data["case_category"] = lawyer_type  # List of matched categories for lawyer
-        response_data["answer"] = ""  # Empty answer since it's a lawyer recommendation
+        if user_role == "LAWYER":
+            response_data["answer"] = "As a lawyer, you may ask legal questions or analyze legal issues. Lawyer recommendation is available only for general users. "
+                
+                
+            
+            response_data["case_category"] = ""
+
+        else:
+        # Normal user flow
+            user_queries = fetch_user_queries(user_id)
+            lawyer_type = recommend_lawyer_from_history(user_queries)
+
+            response_data["answer"] = ""
+            response_data["case_category"] = lawyer_type
         # store_user_query(
         #     user_id=user_id,
         #     query=question,
@@ -298,7 +304,7 @@ def legal_rag_answer(question: str, user_id: str | None = None):
         
         # Prepare the prompt and get response from Groq
         print('extracted prompt')
-        prompt = prompt_template.format(context=context, question=question)
+        prompt = prompt_template.format(context=context, question=question,user_role=user_role)
         response_data["answer"] = call_groq(groq_client, prompt)
         
         # OPTIONAL: infer legal domain from docs

@@ -91,7 +91,7 @@ def read_root():
 
 # to create an endpoint to query the model
 @app.post("/query/")
-async def query_model(question: str, user_id: str):
+async def query_model(question: str, user_id: str, user_role: str):
 
 
     # 1️ Try semantic cache
@@ -108,7 +108,8 @@ async def query_model(question: str, user_id: str):
     # 2 Call RAG pipeline
     response = legal_rag_answer(
         question=question,
-        user_id=user_id
+        user_id=user_id,
+        user_role=user_role
     )
 
     #  Store full structured response in cache

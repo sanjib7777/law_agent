@@ -26,9 +26,10 @@ Classify the user's question into exactly ONE of the following labels:
 - NOT_LEGAL → completely unrelated to law or judiciary
 - RECOMMENDATION → asking to find or recommend a lawyer,  asking to contact, consult, or book a lawyer
 
-Return ONLY ONE label from:
+Return ONLY ONE label from the below :
 LOOKUP, INTERPRETATION, CASE_BASED, PREDICTIVE, GENERAL, NOT_LEGAL, RECOMMENDATION
 
+Important Note: Don't give extra content except the label
 Question:
 {question}
 """
