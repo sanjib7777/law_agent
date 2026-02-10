@@ -44,7 +44,11 @@ def init_clients():
     except Exception:
         pass 
 
-
+    qdrant.create_payload_index(
+    collection_name="nepal_acts",
+    field_name="metadata.section_number",
+    field_schema=PayloadSchemaType.KEYWORD
+)
     constitution_store = QdrantVectorStore(
         client=qdrant,
         collection_name="nepal_constitution",
@@ -106,26 +110,30 @@ def hybrid_constitution_search(store, query: str, k: int = 3):
 
 
 
+
 def retrieve_act_semantic(store, query: str, k: int = 5):
+    # Look for "section <number>" in the query
     section_no = re.search(r"\bsection\s+(\d+)", query.lower())
 
-    results = store.similarity_search_with_score(query, k=k)
-
-    # STEP 1: similarity filtering
-    docs = filter_by_similarity(
-        results,
-        SIMILARITY_THRESHOLD,
-        label="ACT"
-    )
-
-    # STEP 2: section constraint
     if section_no:
-        docs = [
-            d for d in docs
-            if d.metadata.get("section_number") == section_no.group(1)
-        ]
+        docs = store.similarity_search(
+            query,
+            k=k,
+            filter=Filter(
+                must=[
+                    FieldCondition(
+                        key="metadata.section_number",
+                        match=MatchValue(value=section_no.group(1))
+                    )
+                ]
+            )
+        )
+        if docs:
+            return docs
 
-    return docs
+    # Fallback: no section number found, just do a plain similarity search
+    return store.similarity_search(query, k=k)
+
 
 
 
@@ -273,7 +281,7 @@ def legal_rag_answer(question: str, user_id: str, user_role: str):
     }
     
     if query_type == "RECOMMENDATION":
-        print(user_role)
+        # print(user_role)
         # Fetch the user's past queries from the database
         if user_role in ["LAWYER", "FIRM"]:
             response_data["answer"] = "As a lawyer, you may ask legal questions or analyze legal issues. Lawyer recommendation is available only for general users. "
@@ -285,7 +293,7 @@ def legal_rag_answer(question: str, user_id: str, user_role: str):
         else:
         # Normal user flow
             user_queries = fetch_user_queries(user_id)
-            lawyer_type = recommend_lawyer_from_history(user_queries)
+            lawyer_type = recommend_lawyer_from_history(question,user_queries)
 
             response_data["answer"] = ""
             response_data["case_category"] = lawyer_type
@@ -312,7 +320,7 @@ def legal_rag_answer(question: str, user_id: str, user_role: str):
         # Prepare the prompt and get response from Groq
         print('extracted prompt')
         prompt = prompt_template.format(context=context, question=question,user_role=user_role)
-        print(prompt)
+        # print(prompt)
         response_data["answer"] = call_groq(groq_client, prompt)
         
        

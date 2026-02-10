@@ -32,7 +32,11 @@ User's past questions:
 
 
 
-def recommend_lawyer_from_history(user_queries: list[str]) -> str:
+def recommend_lawyer_from_history(current_query:str,user_queries: list[str]) -> str:
+    query_lower = current_query.lower().strip()
+    for category in ["criminal", "civil", "finance", "corporate"]:
+         if category in query_lower:
+             return category.capitalize()
     joined_queries = "\n".join(f"- {q}" for q in user_queries)
 
     response = client.chat.completions.create(
