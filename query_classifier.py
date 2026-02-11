@@ -24,7 +24,10 @@ Classify the user's question into exactly ONE of the following labels:
 - PREDICTIVE → hypothetical or future legal outcome
 - GENERAL → legal question but does not fit above categories
 - NOT_LEGAL → completely unrelated to law or judiciary
-- RECOMMENDATION → asking to find or recommend a lawyer,  asking to contact, consult, or book a lawyer
+- RECOMMENDATION → asking to find or recommend a LAWYER (e.g., contact, consult or book a lawyer).
+
+IMPORTANT: 
+- Do NOT classify as RECOMMENDATION if the user is asking for **laws**, **articles**, or **sections** related to a case or legal issue. Only classify as RECOMMENDATION if the user specifically asks for a **lawyer recommendation** (e.g., "find me a lawyer", "book a lawyer", "recommend a lawyer").
 
 STRICT OUTPUT FORMAT:
 - Output must be EXACTLY ONE of the labels above i.e (LOOKUP, INTERPRETATION, CASE_BASED, PREDICTIVE, GENERAL, NOT_LEGAL, RECOMMENDATION)
@@ -36,6 +39,7 @@ If the question does not clearly fit any category, output GENERAL.
 Question:
 {question}
 """
+
 
 
 def classify_query_llm(question: str) -> str:
