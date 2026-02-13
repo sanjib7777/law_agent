@@ -24,7 +24,8 @@ STRICT OUTPUT RULES:
 - Output MUST NOT contain explanations, sentences, punctuation, or extra text
 - Output MUST be ONLY the category name
 
-If the questions relate to multiple areas, choose the MOST dominant one.
+Important Note: Cases regarding **family inheritance** or **family property division** (e.g., disputes over inheritance between family members or relatives) Property-related issues between family members** or **related to ancestral property**
+If the questions relate to multiple areas, choose the MOST dominant one. is the Civil category.
 
 User's past questions:
 {queries}
